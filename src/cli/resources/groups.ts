@@ -13,6 +13,7 @@ import {
   updateContainerConfigJson,
 } from '../../db/container-configs.js';
 import { initGroupFilesystem } from '../../group-init.js';
+import { isValidContainerPath } from '../../modules/mount-security/index.js';
 import { createAgentFromTemplate } from '../../templates/create-agent.js';
 import type { AgentGroup, ContainerConfigRow } from '../../types.js';
 import { registerResource } from '../crud.js';
@@ -425,6 +426,12 @@ registerResource({
         const hostPath = (args.host ?? args['host-path']) as string | undefined;
         const containerPath = (args.container ?? args['container-path']) as string | undefined;
         if (!hostPath || !containerPath) throw new Error('Provide --host <host-path> and --container <container-path>');
+        if (!isValidContainerPath(containerPath)) {
+          throw new Error(
+            `Invalid --container "${containerPath}" — must be a relative name (it is placed under ` +
+              `/workspace/extra/ automatically), non-empty, and not contain ".." or ":". Use e.g. --container obsidian, not --container /workspace/extra/obsidian.`,
+          );
+        }
 
         const row = getContainerConfig(id);
         if (!row) throw new Error(`No container config for group: ${id}`);
@@ -432,7 +439,7 @@ registerResource({
         const mount: AdditionalMountConfig = {
           hostPath,
           containerPath,
-          ...(args.ro || args.readonly ? { readonly: true } : {}),
+          readonly: Boolean(args.ro || args.readonly),
         };
         const existing = JSON.parse(row.additional_mounts) as AdditionalMountConfig[];
         if (!existing.some((m) => m.hostPath === hostPath && m.containerPath === containerPath)) {

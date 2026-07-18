@@ -235,12 +235,12 @@ describe('groups config add-mount / remove-mount (host-only)', () => {
     const GID = 'ag-mount';
     createAgentGroup({ id: GID, name: 'm', folder: 'm', agent_provider: null, created_at: now() });
     ensureContainerConfig(GID);
-    const args = { id: GID, host: '/data/.gmail-mcp', container: '/home/node/.gmail-mcp', ro: true };
+    const args = { id: GID, host: '/data/.gmail-mcp', container: '.gmail-mcp', ro: true };
 
     const add = await dispatch({ id: 'r1', command: 'groups-config-add-mount', args }, { caller: 'host' });
     expect(add.ok).toBe(true);
     expect(JSON.parse(getContainerConfig(GID)!.additional_mounts)).toEqual([
-      { hostPath: '/data/.gmail-mcp', containerPath: '/home/node/.gmail-mcp', readonly: true },
+      { hostPath: '/data/.gmail-mcp', containerPath: '.gmail-mcp', readonly: true },
     ]);
 
     // idempotent: a second add does not duplicate
@@ -251,11 +251,30 @@ describe('groups config add-mount / remove-mount (host-only)', () => {
       {
         id: 'r3',
         command: 'groups-config-remove-mount',
-        args: { id: GID, host: '/data/.gmail-mcp', container: '/home/node/.gmail-mcp' },
+        args: { id: GID, host: '/data/.gmail-mcp', container: '.gmail-mcp' },
       },
       { caller: 'host' },
     );
     expect(rm.ok).toBe(true);
+    expect(JSON.parse(getContainerConfig(GID)!.additional_mounts)).toEqual([]);
+  });
+
+  it('rejects an absolute --container path with a clear error', async () => {
+    const GID = 'ag-mount-abs';
+    createAgentGroup({ id: GID, name: 'm', folder: 'm', agent_provider: null, created_at: now() });
+    ensureContainerConfig(GID);
+
+    const add = await dispatch(
+      {
+        id: 'r1',
+        command: 'groups-config-add-mount',
+        args: { id: GID, host: '/data/vault', container: '/workspace/extra/vault' },
+      },
+      { caller: 'host' },
+    );
+    expect(add.ok).toBe(false);
+    if (add.ok) throw new Error('expected failure');
+    expect(add.error.message).toMatch(/relative name/);
     expect(JSON.parse(getContainerConfig(GID)!.additional_mounts)).toEqual([]);
   });
 });

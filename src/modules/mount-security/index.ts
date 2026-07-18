@@ -241,7 +241,7 @@ function findAllowedRoot(realPath: string, allowedRoots: AllowedRoot[]): Allowed
 /**
  * Validate the container path to prevent escaping /workspace/extra/
  */
-function isValidContainerPath(containerPath: string): boolean {
+export function isValidContainerPath(containerPath: string): boolean {
   // Must not contain .. to prevent path traversal
   if (containerPath.includes('..')) {
     return false;
