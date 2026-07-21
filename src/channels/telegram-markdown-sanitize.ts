@@ -6,6 +6,14 @@
  * delimiter counts, or malformed links are rejected by Telegram and dropped
  * after retries. Remove this once upstream ships real mode-aware conversion
  * (vercel/chat PR #367 adds the knob; a follow-up is needed for the converter).
+ *
+ * This file is skill-managed (copied verbatim from upstream/channels by
+ * /add-telegram) — a bare re-run of /add-telegram or /update-skills
+ * overwrites it. The bare-URL wrapping below (2026-07-21, "can't find end
+ * of a URL" — GitLab's /-/merge_requests/ underscore) is NOT yet upstream;
+ * PR pending at lizo-ai/nanoclaw:fix/telegram-url-underscore-parity →
+ * nanocoai/nanoclaw:channels. If this comment is gone after a skill re-run,
+ * the fix was reverted — check that PR's status and reapply if unmerged.
  */
 
 const CODE_PATTERN = /```[\s\S]*?```|`[^`\n]*`/g;
