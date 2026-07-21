@@ -21,6 +21,33 @@ export function sanitizeTelegramLegacyMarkdown(input: string): string {
     return `${PLACEHOLDER_PREFIX}${codeSegments.length - 1}${PLACEHOLDER_SUFFIX}`;
   });
 
+  // Existing markdown links (e.g. `[docs](https://example.com/a_b)`) hide
+  // their URL from the bare-URL wrap below and get placeholder-protected
+  // here first, so an underscore in the link *destination* survives the
+  // delimiter-parity stripping a few lines down same as a code span would.
+  const LINK_PATTERN = /\[[^[\]\n]*\]\([^()\n]*\)/g;
+  text = text.replace(LINK_PATTERN, (m) => {
+    codeSegments.push(m);
+    return `${PLACEHOLDER_PREFIX}${codeSegments.length - 1}${PLACEHOLDER_SUFFIX}`;
+  });
+
+  // Bare URLs (not already in a markdown link or code span, both already
+  // placeholder-protected above) commonly contain underscores — GitLab's
+  // /-/merge_requests/ path is the recurring offender. The delimiter-parity
+  // check below can't tell a URL's underscore from a real _italic_ marker,
+  // and Telegram's own legacy-Markdown parser chokes on an unescaped `_`
+  // inside a bare URL ("can't find end of a URL"), silently dropping the
+  // message after retries exhaust. Wrapping in `[url](url)` moves the
+  // underscore into the link *destination*, which Telegram does not
+  // re-parse for entities — keeps the link clickable, unlike backticks.
+  // Protected via the same placeholder mechanism as code spans (not inlined
+  // directly) so the parity/bracket checks below can't see or strip its `_`
+  // or `[`/`]` — those checks run on raw regex counts, not real parse state.
+  text = text.replace(/\bhttps?:\/\/[^\s<>\])]+/g, (m) => {
+    codeSegments.push(`[${m}](${m})`);
+    return `${PLACEHOLDER_PREFIX}${codeSegments.length - 1}${PLACEHOLDER_SUFFIX}`;
+  });
+
   // The adapter re-parses and re-stringifies markdown before sending, which
   // rewrites `- item` list bullets into `* item` — injecting unbalanced
   // asterisks that Telegram's legacy Markdown parser then rejects. Replace

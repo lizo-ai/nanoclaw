@@ -58,6 +58,32 @@ describe('sanitizeTelegramLegacyMarkdown', () => {
     expect(sanitizeTelegramLegacyMarkdown('')).toBe('');
   });
 
+  it('wraps a bare URL containing an underscore so Telegram does not misparse it as italics', () => {
+    const input = 'MR created: https://gitlab.com/lizo-ai/lizo-UI/-/merge_requests/453';
+    expect(sanitizeTelegramLegacyMarkdown(input)).toBe(
+      'MR created: [https://gitlab.com/lizo-ai/lizo-UI/-/merge_requests/453](https://gitlab.com/lizo-ai/lizo-UI/-/merge_requests/453)',
+    );
+  });
+
+  it('protects a wrapped URL from the odd-underscore-count stripping pass', () => {
+    // One stray underscore elsewhere makes the total count odd; the URL's
+    // own underscore must not be stripped as collateral damage.
+    const input = 'file_name and https://gitlab.com/x/-/merge_requests/1';
+    const out = sanitizeTelegramLegacyMarkdown(input);
+    expect(out).toContain('merge_requests');
+    expect(out).toContain('[https://gitlab.com/x/-/merge_requests/1](https://gitlab.com/x/-/merge_requests/1)');
+  });
+
+  it('does not re-wrap a URL already inside a markdown link', () => {
+    const input = 'see [docs](https://example.com/a_b) for more';
+    expect(sanitizeTelegramLegacyMarkdown(input)).toBe(input);
+  });
+
+  it('leaves a URL already inside a code span untouched', () => {
+    const input = 'see `https://example.com/merge_requests/1` for the raw link';
+    expect(sanitizeTelegramLegacyMarkdown(input)).toBe(input);
+  });
+
   it('replaces dash list bullets with • so the adapter does not re-emit `*` markers', () => {
     expect(sanitizeTelegramLegacyMarkdown('- one\n- two')).toBe('• one\n• two');
   });
