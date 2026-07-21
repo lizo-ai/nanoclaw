@@ -58,10 +58,15 @@ describe('sanitizeTelegramLegacyMarkdown', () => {
     expect(sanitizeTelegramLegacyMarkdown('')).toBe('');
   });
 
-  it('wraps a bare URL containing an underscore so Telegram does not misparse it as italics', () => {
+  it('wraps a bare URL containing an underscore, percent-encoding it in the destination only', () => {
+    // The label keeps the human-readable underscore (the adapter's own
+    // markdown round-trip backslash-escapes it there); the destination is
+    // percent-encoded so @chat-adapter/telegram's post-render safe-boundary
+    // trim (a *different*, upstream bug — see the file header) doesn't see
+    // an unescaped `_` and truncate the message right before the link.
     const input = 'MR created: https://gitlab.com/lizo-ai/lizo-UI/-/merge_requests/453';
     expect(sanitizeTelegramLegacyMarkdown(input)).toBe(
-      'MR created: [https://gitlab.com/lizo-ai/lizo-UI/-/merge_requests/453](https://gitlab.com/lizo-ai/lizo-UI/-/merge_requests/453)',
+      'MR created: [https://gitlab.com/lizo-ai/lizo-UI/-/merge_requests/453](https://gitlab.com/lizo-ai/lizo-UI/-/merge%5Frequests/453)',
     );
   });
 
@@ -70,13 +75,18 @@ describe('sanitizeTelegramLegacyMarkdown', () => {
     // own underscore must not be stripped as collateral damage.
     const input = 'file_name and https://gitlab.com/x/-/merge_requests/1';
     const out = sanitizeTelegramLegacyMarkdown(input);
-    expect(out).toContain('merge_requests');
-    expect(out).toContain('[https://gitlab.com/x/-/merge_requests/1](https://gitlab.com/x/-/merge_requests/1)');
+    expect(out).toContain('merge_requests'); // label — human-readable
+    expect(out).toContain('[https://gitlab.com/x/-/merge_requests/1](https://gitlab.com/x/-/merge%5Frequests/1)');
   });
 
-  it('does not re-wrap a URL already inside a markdown link', () => {
+  it('does not re-wrap a URL already inside a markdown link, but still percent-encodes its destination', () => {
     const input = 'see [docs](https://example.com/a_b) for more';
-    expect(sanitizeTelegramLegacyMarkdown(input)).toBe(input);
+    expect(sanitizeTelegramLegacyMarkdown(input)).toBe('see [docs](https://example.com/a%5Fb) for more');
+  });
+
+  it('percent-encodes *, ~, and ` in a link destination too, not just _', () => {
+    const input = 'see [docs](https://example.com/a*b~c`d) for more';
+    expect(sanitizeTelegramLegacyMarkdown(input)).toBe('see [docs](https://example.com/a%2Ab%7Ec%60d) for more');
   });
 
   it('leaves a URL already inside a code span untouched', () => {
