@@ -11,8 +11,7 @@
  * /add-telegram) — a bare re-run of /add-telegram or /update-skills
  * overwrites it. The bare-URL wrapping below (2026-07-21, "can't find end
  * of a URL" — GitLab's /-/merge_requests/ underscore) is NOT yet upstream;
- * PR pending at lizo-ai/nanoclaw:fix/telegram-url-underscore-parity →
- * nanocoai/nanoclaw:channels. If this comment is gone after a skill re-run,
+ * see nanocoai/nanoclaw#3111. If this comment is gone after a skill re-run,
  * the fix was reverted — check that PR's status and reapply if unmerged.
  */
 
